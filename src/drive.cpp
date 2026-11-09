@@ -168,6 +168,31 @@ static uint16_t next_value_size(file_t* file) {
   }
 }
 
+/**
+ * Get the size of the next record stored in INTERNAL,RELATIVE format.
+ */
+static uint16_t get_recsize(file_t* file, uint16_t blen) {
+  // if data stored in INTERNAL,RELATIVE format send datasize in record
+  uint16_t read;    // how many bytes are read
+  uint16_t dl;      // calculated data length
+  uint8_t val_len;  // length of next value
+  uint32_t val_ptr; // start position in file
+  uint8_t res;      // read result
+
+
+  val_ptr= file->fp.fptr;
+  dl = 0;
+  do {
+    res = f_read(&(file->fp), &val_len, 1, &read);
+    if (val_len > 0) {
+      dl = dl + val_len + 1;
+      f_lseek(&(file->fp), val_ptr + dl);
+    }
+  } while((res == FR_OK) && (val_len > 0) && (dl < blen));
+  f_lseek(&(file->fp), val_ptr);
+  return (res == FR_OK ? dl : 0);
+}
+
 static hexstatus_t fresult2hexstatus(FRESULT fr) {
   hexstatus_t rc = HEXSTAT_SUCCESS;
 
@@ -412,7 +437,7 @@ static void drv_write_cmd(pab_t *pab, uint8_t *dev) {
 static void drv_write(pab_t *pab) {
   hexstatus_t rc = HEXSTAT_SUCCESS;
   uint16_t len;
-  uint16_t i;
+  uint32_t i;
   uint16_t header = 0;
   uint8_t  first_buffer = 1;
   UINT written;
@@ -434,15 +459,15 @@ static void drv_write(pab_t *pab) {
   res = (file != NULL ? FR_OK : FR_NO_FILE);
   if (res == FR_OK && (file->attr & FILEATTR_RELATIVE)){
     // if we're not at the right record position, reposition
-    if (file->fp.fsize < pab->buflen * pab->record) {
+    if (file->fp.fsize < (uint32_t)pab->buflen * pab->record) {
       // file is too small.  Enlarge.
       // TODO make this more efficient by handling in 256 byte chunks...
       res = f_lseek( &(file->fp), file->fp.fsize );
       buffer[0] = 0;
-      for (i = file->fp.fsize; i < pab->buflen * pab->record; i++)
+      for (i = file->fp.fsize; i < (uint32_t)pab->buflen * pab->record; i++)
         res = f_write(&(file->fp), buffer, 1, &written);
     }  else // file is big enough, just find the right spot.
-      res = f_lseek(&(file->fp), pab->buflen * pab->record);
+      res = f_lseek(&(file->fp), (uint32_t)pab->buflen * pab->record);
   }
   // OK, read the data we need to send to the file
   while (len && rc == HEXSTAT_SUCCESS && res == FR_OK ) {
@@ -526,7 +551,7 @@ static void drv_read(pab_t *pab) {
   hexstatus_t rc;
   uint8_t i;
   uint16_t len;
-  uint16_t fsize;
+  uint32_t fsize;
   char token;
   UINT read;
   FRESULT res = FR_OK;
@@ -553,17 +578,17 @@ static void drv_read(pab_t *pab) {
     }
   }
   if ((file != NULL) && (file->attr & FILEATTR_RELATIVE))
-    f_lseek(&(file->fp), pab->buflen * pab->record);
+    f_lseek(&(file->fp), (uint32_t)pab->buflen * pab->record);
   if (file != NULL) {
-    if ( (uint16_t)file->fp.fptr < file->fp.fsize ) {
-      fsize = file->fp.fsize - (uint16_t)file->fp.fptr; // amount of data in file that can be sent.
+    if ( file->fp.fptr < file->fp.fsize ) {
+      fsize = file->fp.fsize - file->fp.fptr; // amount of data in file that can be sent.
       if (fsize != 0 && pab->lun != 0 && pab->lun != LUN_RAW) { // for 'normal' files (lun > 0 && lun < 254) send data value by value
         // amount of data for next value to be sent
         if (file->attr & FILEATTR_RELATIVE) 
           if (file->attr & FILEATTR_DISPLAY) 
             fsize = next_value_size(file);
           else
-            fsize = pab->buflen;
+            fsize = get_recsize(file, pab->buflen);
         else  
           fsize = next_value_size(file); // TODO maybe rename fsize to something like send_size
       }
@@ -579,8 +604,8 @@ static void drv_read(pab_t *pab) {
           }
         }
       }
-      if ((uint16_t)file->fp.fptr + fsize >= file->fp.fsize)
-        fsize = file->fp.fsize - (uint16_t)file->fp.fptr;
+      if (file->fp.fptr + fsize >= file->fp.fsize)
+        fsize = file->fp.fsize - file->fp.fptr;
       // send how much we are going to send
       rc = (hex_send_word( fsize ) == HEXERR_SUCCESS ? HEXSTAT_SUCCESS : HEXSTAT_DATA_ERR);
       len = 1; // send data immediately byte by byte to avoid time-out errors
@@ -611,9 +636,9 @@ static void drv_read(pab_t *pab) {
           res = f_read(&(file->fp), &token, 1, &read); // skip (CR)LF
           if (token == '\r')
             res = f_read(&(file->fp), &token, 1, &read);
-          if (file->attr & FILEATTR_RELATIVE)
-            f_lseek(&(file->fp), pab->buflen * (pab->record + 1));
         }
+        if (file->attr & FILEATTR_RELATIVE)
+          f_lseek(&(file->fp), (uint32_t)pab->buflen * (pab->record + 1));
       }
     }
     else {
