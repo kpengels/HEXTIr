@@ -172,7 +172,7 @@ static uint16_t next_value_size(file_t* file) {
  * Get the size of the next record stored in INTERNAL,RELATIVE format.
  */
 static uint16_t get_recsize(file_t* file, uint16_t blen) {
-  // if data stored in INTERNAL,RELATIVE format send datasize in record
+  // if data stored in INTERNAL, RELATIVE format send datasize in record
   uint16_t read;    // how many bytes are read
   uint16_t dl;      // calculated data length
   uint8_t val_len;  // length of next value
@@ -460,12 +460,16 @@ static void drv_write(pab_t *pab) {
   if (res == FR_OK && (file->attr & FILEATTR_RELATIVE)){
     // if we're not at the right record position, reposition
     if (file->fp.fsize < (uint32_t)pab->buflen * pab->record) {
-      // file is too small.  Enlarge.
+      // file is too small.
+      rc = HEXSTAT_EOF;
+      hex_eat_it( len, rc );
+      return;
+      /* Enlarge.
       // TODO make this more efficient by handling in 256 byte chunks...
       res = f_lseek( &(file->fp), file->fp.fsize );
       buffer[0] = 0;
       for (i = file->fp.fsize; i < (uint32_t)pab->buflen * pab->record; i++)
-        res = f_write(&(file->fp), buffer, 1, &written);
+        res = f_write(&(file->fp), buffer, 1, &written); */
     }  else // file is big enough, just find the right spot.
       res = f_lseek(&(file->fp), (uint32_t)pab->buflen * pab->record);
   }
