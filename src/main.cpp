@@ -199,6 +199,11 @@ int main(void) {
       while ( i < 9 ) {
         pabdata.raw[ i ] = i;
         res = hex_recv_byte( &pabdata.raw[ i ] );
+        if (i == 0){
+          if (pabdata.raw[ i ] == 101){
+            pabdata.raw[ i ] = 100;
+          }
+        }
 #ifdef HAVE_HOTPLUG
         // Since we defer mounting the drive until a file is requested,
         // this state may exist for some time.
