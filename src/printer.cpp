@@ -180,7 +180,7 @@ static void prn_open(pab_t *pab) {
     // we should check att, as it should be WRITE or UPDATE
     if(blen)
       rc = prn_exec_cmds(buf, blen, &(_config.prn_dev), &(_config.prn));
-    hex_finish_open(BUFSIZE, rc);
+    hex_finish_open(BUFSIZE, 0, rc);
     return;
   }
 
@@ -199,7 +199,7 @@ static void prn_open(pab_t *pab) {
     _prn_open = TRUE;  // our printer is NOW officially open.
     len = len ? len : BUFSIZE;
   }
-  hex_finish_open(len, rc);
+  hex_finish_open(len, 0, rc);
 }
 
 

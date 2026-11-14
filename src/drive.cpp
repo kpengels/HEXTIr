@@ -479,7 +479,7 @@ static void drv_write(pab_t *pab) {
     rc = hex_get_data(buffer, i);
     if ((pab->lun == 0) && (first_buffer == 1)) {
       header = (buffer[0] | ( buffer[1] << 8 )) & 0xffdf;
-      if ((header == 0x380) || (header  == 0x10f))
+      if ((header == 0xb90) || (header == 0x380) || (header  == 0x10f))
         header = 1;
       else
         header = 0;
@@ -697,6 +697,7 @@ static void drv_open(pab_t *pab) {
   FRESULT res = FR_OK;
   char *path;
   uint8_t pathlen;
+  uint16_t record;
 
   drv_start();
 
@@ -705,7 +706,7 @@ static void drv_open(pab_t *pab) {
   rc = hex_open_helper(pab, (pab->lun == LUN_CMD ? HEXSTAT_TOO_LONG : HEXSTAT_FILE_NAME_INVALID), &len, &att);
   if(rc != HEXSTAT_SUCCESS)
     return;
-
+  record = 0;
   pathlen = pab->datalen - 3;
   path = (char *)(buffer + 3);
   // file path, trimmed whitespaces
@@ -722,7 +723,7 @@ static void drv_open(pab_t *pab) {
     // we should check att, as it should be WRITE or UPDATE
     if(path[0] != 0)
       rc = drv_exec_cmds(path, pathlen, &(_config.drv_dev));
-    hex_finish_open(BUFSIZE, rc);
+    hex_finish_open(BUFSIZE, record, rc);
     return;
   }
 
@@ -767,6 +768,12 @@ static void drv_open(pab_t *pab) {
       if(res == FR_OK && (att & OPENMODE_MASK) == OPENMODE_APPEND ) {
         // TODO we can remove if we add FA_OPEN_APPEND to FatFS
         res = f_lseek( &(file->fp), file->fp.fsize ); // position for append.
+        if (len == 0){
+          record = (file->fp.fsize / BUFSIZE) & 0xffff;
+        }
+        else {
+          record = (file->fp.fsize / len) & 0xffff;
+        }
       }
 
       rc = fresult2hexstatus(res);
@@ -822,7 +829,7 @@ static void drv_open(pab_t *pab) {
     }
   }
 
-  hex_finish_open(fsize, rc);
+  hex_finish_open(fsize, record, rc);
 }
 
 

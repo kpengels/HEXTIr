@@ -277,10 +277,10 @@ void split_cmd(char **buf, uint8_t *len, char **buf2, uint8_t *len2) {
 }
 
 
-void hex_finish_open(uint16_t len, hexstatus_t rc) {
+void hex_finish_open(uint16_t len, uint16_t record, hexstatus_t rc) {
 
   if ( rc == HEXSTAT_SUCCESS ) {
-    hex_send_size_response(len, 0);
+    hex_send_size_response(len, record);
   } else {
     hex_send_final_response( rc );
   }

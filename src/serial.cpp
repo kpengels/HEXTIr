@@ -343,7 +343,7 @@ static void ser_open(pab_t *pab) {
     // we should check att, as it should be WRITE or UPDATE
     if(blen)
       rc = ser_exec_cmds(buf, blen, &(_config.ser_dev), &(_config.ser));
-    hex_finish_open(BUFSIZE, rc);
+    hex_finish_open(BUFSIZE, 0, rc);
     return;
   }
 
@@ -372,7 +372,7 @@ static void ser_open(pab_t *pab) {
     rc = HEXSTAT_ATTR_ERR;
   }
 
-  hex_finish_open(len, rc);
+  hex_finish_open(len, 0. rc);
 }
 
 
