@@ -67,7 +67,7 @@ static void clk_open( pab_t *pab ) {
     // we should check att, as it should be WRITE or UPDATE
     if(blen)
       rc = hex_exec_cmds(buf, blen, &(_config.clk_dev));
-    hex_finish_open(BUFSIZE, rc);
+    hex_finish_open(BUFSIZE, 0, rc);
     return;
   }
 
@@ -81,7 +81,7 @@ static void clk_open( pab_t *pab ) {
     len = len ? len : BUFSIZE;
     rtc_open = att;
   }
-  hex_finish_open(len, rc);
+  hex_finish_open(len, 0, rc);
 }
 
 /*
