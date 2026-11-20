@@ -828,7 +828,7 @@ static void drv_open(pab_t *pab) {
         break;
     }
   }
-
+  file->reclen = fsize;
   hex_finish_open(fsize, record, rc);
 }
 
@@ -994,7 +994,10 @@ static void drv_status( pab_t *pab ) {
       //       ... relative or sequential access as well)
       st = FILE_DEV_IS_OPEN | FILE_SUPPORTS_RELATIVE | FILE_IO_MODE_READWRITE;
       if ( !( file->attr & FILEATTR_CATALOG )) {
-        if ( file->fp.fptr == file->fp.fsize ) {
+        if (file->attr & FILEATTR_RELATIVE) {
+          f_lseek(&(file->fp), (uint32_t)file->reclen * pab->record);
+        }  
+        if ( file->fp.fptr >= file->fp.fsize ) {
           st |= FILE_EOF_REACHED;
         }
       }

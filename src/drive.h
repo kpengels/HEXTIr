@@ -37,6 +37,7 @@ typedef struct _file_t {
   DIR dir;
   uint8_t attr;
   uint16_t dirnum;
+  uint16_t reclen;
   char* pattern;
 } file_t;
 
